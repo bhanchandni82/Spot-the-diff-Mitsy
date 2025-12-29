@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Underwater Spot the Difference</title>
     <style>
         body {
@@ -12,14 +12,13 @@
             text-align: center;
             margin: 0;
             padding: 10px;
-            touch-action: manipulation; /* Prevents zooming on double-tap on phones */
+            touch-action: manipulation;
         }
-        
-        /* Start Screen */
+
         #overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -28,31 +27,31 @@
         }
 
         .start-btn {
-            padding: 20px 40px;
-            font-size: 28px;
+            padding: 25px 50px;
+            font-size: 32px;
             background: #FFD700;
             border: none;
-            border-radius: 50px;
+            border-radius: 60px;
             cursor: pointer;
             color: #1e3c72;
             font-weight: bold;
-            box-shadow: 0 0 20px #FFD700;
+            box-shadow: 0 0 30px #FFD700;
         }
 
-        /* Responsive Container */
+        /* AUTO-ADJUSTING LAYOUT */
         .container {
             display: flex;
-            flex-direction: column; /* Stacked by default (Phone) */
+            flex-direction: column; /* Mobile first: Stacks images */
             align-items: center;
             gap: 15px;
-            max-width: 100%;
+            width: 100%;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
-        /* Computer View: Side-by-Side */
         @media (min-width: 900px) {
             .container {
-                flex-direction: row;
+                flex-direction: row; /* Desktop: Side-by-side */
                 justify-content: center;
             }
             .image-box { width: 48%; }
@@ -60,75 +59,71 @@
 
         .image-box {
             position: relative;
-            width: 95%; /* Responsive width */
-            max-width: 600px;
+            width: 95%; /* Size on phone */
             border: 4px solid white;
-            border-radius: 12px;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
         }
 
         .image-box img {
             width: 100%;
             display: block;
-            pointer-events: none; /* Prevents dragging image instead of clicking */
+            pointer-events: none;
         }
 
         .marker {
             position: absolute;
-            width: 8%; /* Size adjusts to image size */
-            aspect-ratio: 1/1;
-            border: 3px solid #00FF00;
+            width: 45px;
+            height: 45px;
+            border: 4px solid #00FF00;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
             background: rgba(0, 255, 0, 0.2);
         }
 
-        #stats { font-size: 20px; margin: 15px 0; }
-        #message { font-size: 24px; color: #FFD700; min-height: 40px; margin-top: 15px; }
+        #stats { font-size: 22px; margin: 15px 0; }
+        #message { font-size: 26px; color: #FFD700; min-height: 40px; margin-top: 15px; }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1>🐠 Underwater Hunt!</h1>
+        <h1 style="font-size: 40px; margin-bottom: 30px;">🐠 Ready? 🐙</h1>
         <button class="start-btn" onclick="startGame()">START GAME</button>
     </div>
 
-    <audio id="bgMusic" loop preload="auto">
+    <audio id="bgMusic" loop crossorigin="anonymous">
         <source src="underwater-music.mp3" type="audio/mpeg">
     </audio>
 
     <div class="game-header">
-        <h2>Underwater Treasure Hunt</h2>
+        <h2 style="margin: 10px 0;">Underwater Treasure Hunt</h2>
         <div id="stats">
             Time: <span id="timer">60</span>s | Found: <span id="found">0</span>/5
         </div>
     </div>
 
     <div class="container">
-        <div class="image-box" id="left-box" onclick="handleTap(event)">
+        <div class="image-box" id="left-box" onclick="handleInput(event)">
             <img src="./spot-the-diff.png" alt="Original">
         </div>
-        <div class="image-box" id="right-box" onclick="handleTap(event)">
+        <div class="image-box" id="right-box" onclick="handleInput(event)">
             <img src="./spot-the-diff-2.png" alt="Differences">
         </div>
     </div>
 
     <div id="message"></div>
 
-    <p style="font-size: 10px; opacity: 0.6; margin-top: 20px;">
-        Music: "Aquarium" by Kevin MacLeod (incompetech.com)
-    </p>
-
     <script>
+        // PRECISE COORDINATES FROM BLACK SQUARE MAP
         const differences = [
-            {x: 88.2, y: 64.1, found: false},
-            {x: 47.5, y: 68.4, found: false},
-            {x: 36.6, y: 72.8, found: false},
-            {x: 17.5, y: 80.2, found: false},
-            {x: 95.8, y: 60.5, found: false}
+            {x: 88.2, y: 64.1, found: false}, // Starfish
+            {x: 47.5, y: 68.4, found: false}, // Chest Dot
+            {x: 36.6, y: 72.8, found: false}, // Fish Pattern
+            {x: 17.5, y: 80.2, found: false}, // Left Bubble
+            {x: 95.8, y: 60.5, found: false}  // Far Right Seahorse
         ];
 
         let foundCount = 0;
@@ -137,51 +132,59 @@
 
         function startGame() {
             const music = document.getElementById('bgMusic');
-            music.play().catch(e => console.log("Audio failed:", e));
             
+            // This is the strongest way to force audio to play on iPhones/Androids
+            music.load();
+            var playPromise = music.play();
+
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Auto-play was prevented. Using backup trigger.");
+                });
+            }
+
             document.getElementById('overlay').style.display = 'none';
             gameActive = true;
-            runTimer();
+            startCountdown();
         }
 
-        function runTimer() {
-            const interval = setInterval(() => {
-                if (!gameActive) return clearInterval(interval);
+        function startCountdown() {
+            const timer = setInterval(() => {
+                if (!gameActive) return clearInterval(timer);
                 timeLeft--;
                 document.getElementById('timer').innerText = timeLeft;
                 if (timeLeft <= 0) endGame(false);
             }, 1000);
         }
 
-        function handleTap(e) {
+        function handleInput(e) {
             if (!gameActive) return;
             
             const rect = e.currentTarget.getBoundingClientRect();
-            // This calculation works for both mouse and touch!
             const x = ((e.clientX - rect.left) / rect.width) * 100;
             const y = ((e.clientY - rect.top) / rect.height) * 100;
 
             differences.forEach(diff => {
                 if (!diff.found) {
                     const dist = Math.sqrt(Math.pow(x - diff.x, 2) + Math.pow(y - diff.y, 2));
-                    if (dist < 8) { // 8% tolerance is great for phones
+                    if (dist < 8) { // Tolerance set for easy phone tapping
                         diff.found = true;
                         foundCount++;
                         document.getElementById('found').innerText = foundCount;
-                        mark(diff.x, diff.y);
+                        draw(diff.x, diff.y);
                         if (foundCount === 5) endGame(true);
                     }
                 }
             });
         }
 
-        function mark(x, y) {
+        function draw(x, y) {
             ['left-box', 'right-box'].forEach(id => {
-                const dot = document.createElement('div');
-                dot.className = 'marker';
-                dot.style.left = x + '%';
-                dot.style.top = y + '%';
-                document.getElementById(id).appendChild(dot);
+                const circle = document.createElement('div');
+                circle.className = 'marker';
+                circle.style.left = x + '%';
+                circle.style.top = y + '%';
+                document.getElementById(id).appendChild(circle);
             });
         }
 
