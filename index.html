@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Underwater Spot the Difference</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Arial Rounded MT Bold', sans-serif;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .game-header { margin-bottom: 20px; }
+        #stats { font-size: 24px; margin: 10px; display: flex; justify-content: center; gap: 40px; }
+        
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .image-box {
+            position: relative;
+            border: 4px solid white;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: crosshair;
+            width: 500px; /* Adjust based on preference */
+        }
+        .image-box img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .marker {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #00FF00;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(0,255,0,0.8);
+        }
+        #message {
+            font-size: 28px;
+            margin-top: 20px;
+            color: #FFD700;
+            height: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-header">
+        <h1>🐠 Underwater Treasure Hunt! 🦀</h1>
+        <div id="stats">
+            <div>Timer: <span id="timer">60</span>s</div>
+            <div>Found: <span id="found">0</span>/5</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="image-box" id="left-box" onclick="checkClick(event)">
+            <img src="spot-the-diff.jpg" alt="Original">
+        </div>
+        <div class="image-box" id="right-box" onclick="checkClick(event)">
+            <img src="spot-the-diff (1).jpg" alt="With Differences">
+        </div>
+    </div>
+
+    <div id="message"></div>
+
+    <script>
+        // COORDINATES (Percentages: 0 to 100)
+        // I have estimated these based on your images:
+        // 1. Starfish on the right 2. Bubble pattern 3. Fish fin color 4. Shell detail 5. Treasure light
+        const differences = [
+            {x: 88, y: 64, found: false}, // Starfish
+            {x: 36, y: 72, found: false}, // Blue fish fin/body
+            {x: 48, y: 68, found: false}, // Chest dot
+            {x: 16, y: 77, found: false}, // Bubble near left fish
+            {x: 96, y: 58, found: false}  // Seahorse/Object on far right
+        ];
+
+        let foundCount = 0;
+        let timeLeft = 60;
+        let gameActive = true;
+
+        const timerEl = document.getElementById('timer');
+        const foundEl = document.getElementById('found');
+        const messageEl = document.getElementById('message');
+
+        const timerInterval = setInterval(() => {
+            if (!gameActive) return;
+            timeLeft--;
+            timerEl.innerText = timeLeft;
+            if (timeLeft <= 0) endGame(false);
+        }, 1000);
+
+        function checkClick(e) {
+            if (!gameActive) return;
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+            differences.forEach((diff) => {
+                if (!diff.found) {
+                    const dist = Math.sqrt(Math.pow(x - diff.x, 2) + Math.pow(y - diff.y, 2));
+                    if (dist < 5) { // 5% click tolerance
+                        diff.found = true;
+                        foundCount++;
+                        foundEl.innerText = foundCount;
+                        addMarker(diff.x, diff.y);
+                        
+                        if (foundCount === 5) endGame(true);
+                    }
+                }
+            });
+        }
+
+        function addMarker(x, y) {
+            [document.getElementById('left-box'), document.getElementById('right-box')].forEach(box => {
+                const marker = document.createElement('div');
+                marker.className = 'marker';
+                marker.style.left = x + '%';
+                marker.style.top = y + '%';
+                box.appendChild(marker);
+            });
+        }
+
+        function endGame(win) {
+            gameActive = false;
+            clearInterval(timerInterval);
+            if (win) {
+                messageEl.innerText = "🎉 Holy Guacamole! You're a human magnifying glass!";
+            } else {
+                messageEl.innerText = "⏰ Time's up! Even the snails beat you this time!";
+            }
+        }
+    </script>
+</body>
+</html>
