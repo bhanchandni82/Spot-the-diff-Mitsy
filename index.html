@@ -79,11 +79,11 @@
         // I have estimated these based on your images:
         // 1. Starfish on the right 2. Bubble pattern 3. Fish fin color 4. Shell detail 5. Treasure light
         const differences = [
-            {x: 88.5, y: 64.5, found: false}, // Starfish (Bottom Right)
-            {x: 48.0, y: 68.5, found: false}, // Red dot on Treasure Chest
-            {x: 36.5, y: 72.5, found: false}, // Circle on Blue Fish
-            {x: 15.5, y: 82.0, found: false}, // Grey circle (Bottom Left)
-            {x: 94.5, y: 62.0, found: false}  // Seahorse (Far Right edge)
+            {x: 88.5, y: 64.5, found: false}, // Starfish (Bottom Right) - OK
+            {x: 48.0, y: 68.5, found: false}, // Treasure Chest Dot - OK
+            {x: 36.5, y: 72.5, found: false}, // Fish Pattern - OK
+            {x: 18.0, y: 81.0, found: false}, // FIXED: Bubble near green plant (Left)
+            {x: 96.2, y: 61.5, found: false}  // FIXED: Seahorse on the far right edge
         ];
 
         let foundCount = 0;
