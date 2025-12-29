@@ -11,188 +11,186 @@
             color: white;
             text-align: center;
             margin: 0;
-            padding: 20px;
-            overflow-x: hidden;
+            padding: 10px;
+            touch-action: manipulation; /* Prevents zooming on double-tap on phones */
         }
-        /* Start Screen Overlay */
+        
+        /* Start Screen */
         #overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
+            z-index: 2000;
         }
+
         .start-btn {
-            padding: 20px 50px;
-            font-size: 30px;
+            padding: 20px 40px;
+            font-size: 28px;
             background: #FFD700;
             border: none;
             border-radius: 50px;
             cursor: pointer;
-            font-weight: bold;
             color: #1e3c72;
+            font-weight: bold;
             box-shadow: 0 0 20px #FFD700;
         }
-        .start-btn:hover { transform: scale(1.1); }
 
-        .game-header { margin-bottom: 20px; }
-        #stats { font-size: 24px; margin: 10px; display: flex; justify-content: center; gap: 40px; }
-        
+        /* Responsive Container */
         .container {
             display: flex;
-            justify-content: center;
+            flex-direction: column; /* Stacked by default (Phone) */
+            align-items: center;
             gap: 15px;
-            max-width: 1200px;
+            max-width: 100%;
             margin: 0 auto;
         }
+
+        /* Computer View: Side-by-Side */
+        @media (min-width: 900px) {
+            .container {
+                flex-direction: row;
+                justify-content: center;
+            }
+            .image-box { width: 48%; }
+        }
+
         .image-box {
             position: relative;
+            width: 95%; /* Responsive width */
+            max-width: 600px;
             border: 4px solid white;
             border-radius: 12px;
             overflow: hidden;
-            cursor: crosshair;
-            width: 48%;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
+
         .image-box img {
-            display: block;
             width: 100%;
-            height: auto;
-            user-select: none;
+            display: block;
+            pointer-events: none; /* Prevents dragging image instead of clicking */
         }
+
         .marker {
             position: absolute;
-            width: 40px; height: 40px;
-            border: 4px solid #00FF00;
+            width: 8%; /* Size adjusts to image size */
+            aspect-ratio: 1/1;
+            border: 3px solid #00FF00;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
-            box-shadow: 0 0 15px rgba(0,255,0,0.8);
-            animation: pop 0.3s ease-out;
+            background: rgba(0, 255, 0, 0.2);
         }
-        @keyframes pop {
-            0% { transform: translate(-50%, -50%) scale(0); }
-            100% { transform: translate(-50%, -50%) scale(1); }
-        }
-        #message {
-            font-size: 28px;
-            margin-top: 20px;
-            color: #FFD700;
-            font-weight: bold;
-            height: 40px;
-        }
+
+        #stats { font-size: 20px; margin: 15px 0; }
+        #message { font-size: 24px; color: #FFD700; min-height: 40px; margin-top: 15px; }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1>Ready for a Treasure Hunt?</h1>
-        <button class="start-btn" onclick="startGame()">START GAME 🐠</button>
+        <h1>🐠 Underwater Hunt!</h1>
+        <button class="start-btn" onclick="startGame()">START GAME</button>
     </div>
 
-    <audio id="bgMusic" loop>
+    <audio id="bgMusic" loop preload="auto">
         <source src="underwater-music.mp3" type="audio/mpeg">
     </audio>
 
     <div class="game-header">
-        <h1>🐠 Underwater Treasure Hunt! 🦀</h1>
+        <h2>Underwater Treasure Hunt</h2>
         <div id="stats">
-            <div>Timer: <span id="timer">60</span>s</div>
-            <div>Found: <span id="found">0</span>/5</div>
+            Time: <span id="timer">60</span>s | Found: <span id="found">0</span>/5
         </div>
     </div>
 
     <div class="container">
-        <div class="image-box" id="left-box" onclick="checkClick(event)">
+        <div class="image-box" id="left-box" onclick="handleTap(event)">
             <img src="./spot-the-diff.png" alt="Original">
         </div>
-        <div class="image-box" id="right-box" onclick="checkClick(event)">
-            <img src="./spot-the-diff-2.png" alt="With Differences">
+        <div class="image-box" id="right-box" onclick="handleTap(event)">
+            <img src="./spot-the-diff-2.png" alt="Differences">
         </div>
     </div>
 
-    <div id="message">Click on the differences!</div>
+    <div id="message"></div>
+
+    <p style="font-size: 10px; opacity: 0.6; margin-top: 20px;">
+        Music: "Aquarium" by Kevin MacLeod (incompetech.com)
+    </p>
 
     <script>
         const differences = [
-            {x: 88.2, y: 64.1, found: false}, // Starfish
-            {x: 47.5, y: 68.4, found: false}, // Treasure Chest
-            {x: 36.6, y: 72.8, found: false}, // Fish Pattern
-            {x: 17.5, y: 80.2, found: false}, // Bubble
-            {x: 95.8, y: 60.5, found: false}  // Seahorse
+            {x: 88.2, y: 64.1, found: false},
+            {x: 47.5, y: 68.4, found: false},
+            {x: 36.6, y: 72.8, found: false},
+            {x: 17.5, y: 80.2, found: false},
+            {x: 95.8, y: 60.5, found: false}
         ];
 
         let foundCount = 0;
         let timeLeft = 60;
-        let gameActive = false; // Game stays paused until Start is clicked
+        let gameActive = false;
 
         function startGame() {
+            const music = document.getElementById('bgMusic');
+            music.play().catch(e => console.log("Audio failed:", e));
+            
             document.getElementById('overlay').style.display = 'none';
-            document.getElementById('bgMusic').play(); // Music starts here!
             gameActive = true;
-            startTimer();
+            runTimer();
         }
 
-        function startTimer() {
-            const timerInterval = setInterval(() => {
-                if (!gameActive) {
-                    clearInterval(timerInterval);
-                    return;
-                }
+        function runTimer() {
+            const interval = setInterval(() => {
+                if (!gameActive) return clearInterval(interval);
                 timeLeft--;
                 document.getElementById('timer').innerText = timeLeft;
                 if (timeLeft <= 0) endGame(false);
             }, 1000);
         }
 
-        function checkClick(e) {
+        function handleTap(e) {
             if (!gameActive) return;
+            
             const rect = e.currentTarget.getBoundingClientRect();
+            // This calculation works for both mouse and touch!
             const x = ((e.clientX - rect.left) / rect.width) * 100;
             const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-            differences.forEach((diff) => {
+            differences.forEach(diff => {
                 if (!diff.found) {
                     const dist = Math.sqrt(Math.pow(x - diff.x, 2) + Math.pow(y - diff.y, 2));
-                    if (dist < 7) { 
+                    if (dist < 8) { // 8% tolerance is great for phones
                         diff.found = true;
                         foundCount++;
                         document.getElementById('found').innerText = foundCount;
-                        addMarker(diff.x, diff.y);
+                        mark(diff.x, diff.y);
                         if (foundCount === 5) endGame(true);
                     }
                 }
             });
         }
 
-        function addMarker(x, y) {
-            [document.getElementById('left-box'), document.getElementById('right-box')].forEach(box => {
-                const marker = document.createElement('div');
-                marker.className = 'marker';
-                marker.style.left = x + '%';
-                marker.style.top = y + '%';
-                box.appendChild(marker);
+        function mark(x, y) {
+            ['left-box', 'right-box'].forEach(id => {
+                const dot = document.createElement('div');
+                dot.className = 'marker';
+                dot.style.left = x + '%';
+                dot.style.top = y + '%';
+                document.getElementById(id).appendChild(dot);
             });
         }
 
         function endGame(win) {
             gameActive = false;
-            const messageEl = document.getElementById('message');
-            if (win) {
-                messageEl.innerHTML = "🎉 YOU DID IT!";
-                messageEl.style.color = "#00FF00";
-            } else {
-                messageEl.innerText = "⏰ Time's up!";
-                messageEl.style.color = "#FF4444";
-            }
+            const msg = document.getElementById('message');
+            msg.innerText = win ? "🎉 YOU WON!" : "⏰ TIME'S UP!";
+            if (!win) document.getElementById('bgMusic').pause();
         }
     </script>
-    <p style="font-size: 10px; color: #ccc; margin-top: 50px;">
-    Music: "Aquarium" by Kevin MacLeod (incompetech.com)<br>
-    Licensed under Creative Commons: By Attribution 4.0 License
-    </p>
 </body>
 </html>
