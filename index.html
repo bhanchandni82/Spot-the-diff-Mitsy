@@ -27,6 +27,12 @@
             border-radius: 50%; transform: translate(-50%, -50%); background: rgba(0, 255, 0, 0.3);
         }
 
+        #game-ui { margin-bottom: 10px; }
+        .mute-btn {
+            background: #FFD700; border: none; border-radius: 5px; padding: 5px 15px;
+            cursor: pointer; font-weight: bold; margin-left: 10px; font-size: 18px;
+        }
+
         /* Speech Bubble Styling */
         #speech-bubble {
             display: none;
@@ -54,9 +60,7 @@
             border-width: 15px 15px 0;
             border-style: solid;
             border-color: white transparent;
-            display: block;
-            width: 0;
-            transform: translateX(-50%);
+            display: block; width: 0; transform: translateX(-50%);
         }
     </style>
 </head>
@@ -73,7 +77,10 @@
 
     <div id="game-ui">
         <h2 id="level-title">Level 1</h2>
-        <p>Found: <span id="found">0</span>/5 | Time: <span id="timer">60</span>s</p>
+        <p>
+            Found: <span id="found">0</span>/5 | Time: <span id="timer">60</span>s
+            <button class="mute-btn" id="muteToggle" onclick="toggleMute()">🔊</button>
+        </p>
     </div>
 
     <div id="speech-bubble">
@@ -109,7 +116,6 @@
                 title: "Bedroom", 
                 img1: "BedroomA.png", 
                 img2: "BedroomB.png", 
-                // Updated coordinates and remarks specifically for the mess items
                 diffs: [{x:26,y:78}, {x:48,y:77}, {x:77,y:72}, {x:91,y:86}, {x:41,y:92}],
                 remarks: [
                     "Aha! So you CAN see that pizza on the bed... I thought it was an art piece titled 'Neglect'.",
@@ -123,14 +129,21 @@
 
         let cur = 0; let found = 0; let time = 60; let active = false; let foundList = [];
         let typingTimer;
+        let isMuted = false;
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('muteToggle').innerText = isMuted ? "🔇" : "🔊";
+            const bgMusic = document.getElementById('bgMusic');
+            bgMusic.muted = isMuted;
+            if (isMuted) window.speechSynthesis.cancel();
+        }
 
         function startGame() {
             document.getElementById('overlay').style.display = 'none';
-            // Start music (some browsers may block this until first click)
-            document.getElementById('bgMusic').play().catch(e => console.log("Audio waiting for interaction"));
+            document.getElementById('bgMusic').play().catch(e => console.log("Audio waiting..."));
             loadLevel(0);
             
-            // Start Timer
             setInterval(() => { 
                 if(active && time > 0) { 
                     time--; 
@@ -161,13 +174,11 @@
             const y = ((e.clientY - rect.top) / rect.height) * 100;
 
             levels[cur].diffs.forEach((d, i) => {
-                // If hit within range and not already found
                 if(!foundList[i] && Math.sqrt(Math.pow(x - d.x, 2) + Math.pow(y - d.y, 2)) < 8) {
                     foundList[i] = true; found++;
                     document.getElementById('found').innerText = found;
                     addCircle(d.x, d.y);
                     
-                    // Trigger Snark and TTS on the final level (Bedroom)
                     if(cur === 2) {
                         handleSnark(levels[cur].remarks[i]);
                     }
@@ -181,13 +192,13 @@
             const bubble = document.getElementById('speech-bubble');
             const txtSpan = document.getElementById('bubble-text');
             
-            // 1. Text-to-Speech (Voice)
             window.speechSynthesis.cancel(); 
-            const speech = new SpeechSynthesisUtterance(text);
-            speech.rate = 0.9; 
-            window.speechSynthesis.speak(speech);
+            if (!isMuted) {
+                const speech = new SpeechSynthesisUtterance(text);
+                speech.rate = 0.9; 
+                window.speechSynthesis.speak(speech);
+            }
 
-            // 2. Typewriter Effect (Visual)
             bubble.style.display = 'block';
             txtSpan.innerHTML = "";
             clearTimeout(typingTimer);
@@ -220,7 +231,7 @@
             } else { 
                 document.getElementById('speech-bubble').style.display = 'none';
                 document.getElementById('msg').innerText = "You Win! Kiki, go clean your room!"; 
-                window.speechSynthesis.speak(new SpeechSynthesisUtterance("You win. Now go clean your room."));
+                if (!isMuted) window.speechSynthesis.speak(new SpeechSynthesisUtterance("You win. Now go clean your room."));
             }
         }
     </script>
