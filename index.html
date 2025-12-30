@@ -16,7 +16,6 @@
             overflow-x: hidden;
         }
 
-        /* Startup Overlay */
         #overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -37,7 +36,6 @@
             box-shadow: 0 0 35px rgba(255, 215, 0, 0.4);
         }
 
-        /* 3-2-1 Countdown */
         #countdown-display {
             position: fixed;
             top: 50%;
@@ -128,7 +126,7 @@
 <body>
 
     <div id="overlay">
-        <img id="cover-img" src="coverpage Spot the diff.png" alt="Detective Mitsy">
+        <img id="cover-img" src="coverpage%20Spot%20the%20diff.png" alt="Detective Mitsy">
         <button class="start-btn" onclick="initiateCountdown()">START GAME</button>
     </div>
 
@@ -147,10 +145,10 @@
 
     <div class="container">
         <div class="image-box" id="left-box" onclick="handleInput(event)">
-            <img id="img-left" src="" alt="Find the mess">
+            <img id="img-left" src="" alt="Left Side">
         </div>
         <div class="image-box" id="right-box" onclick="handleInput(event)">
-            <img id="img-right" src="" alt="Find the mess">
+            <img id="img-right" src="" alt="Right Side">
         </div>
     </div>
 
@@ -178,11 +176,7 @@
                 img2: "BedroomB.png",
                 time: 60,
                 diffs: [
-                    {x: 26.5, y: 78.5}, // Candy wrapper
-                    {x: 48.0, y: 77.5}, // Towel
-                    {x: 77.5, y: 72.0}, // Juice
-                    {x: 91.0, y: 86.0}, // Shoe
-                    {x: 41.5, y: 92.5}  // Pizza/Sock
+                    {x: 26.5, y: 78.5}, {x: 48.0, y: 77.5}, {x: 77.5, y: 72.0}, {x: 91.0, y: 86.0}, {x: 41.5, y: 92.5}
                 ]
             }
         ];
@@ -199,7 +193,7 @@
             const countDisplay = document.getElementById('countdown-display');
             const music = document.getElementById('bgMusic');
             
-            music.play().catch(() => console.log("Music play blocked until interaction"));
+            music.play().catch(() => console.log("Music play blocked"));
             
             countDisplay.style.display = 'block';
             let count = 3;
