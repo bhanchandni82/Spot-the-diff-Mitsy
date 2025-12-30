@@ -26,6 +26,38 @@
             position: absolute; width: 40px; height: 40px; border: 3px solid #00FF00;
             border-radius: 50%; transform: translate(-50%, -50%); background: rgba(0, 255, 0, 0.3);
         }
+
+        /* Speech Bubble Styling */
+        #speech-bubble {
+            display: none;
+            background: white;
+            color: #333;
+            border-radius: 20px;
+            padding: 15px;
+            width: 85%;
+            max-width: 600px;
+            margin: 10px auto;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-weight: bold;
+            font-size: 1.1em;
+            border: 3px solid #FFD700;
+            min-height: 40px;
+            line-height: 1.4;
+            z-index: 100;
+        }
+        #speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            border-width: 15px 15px 0;
+            border-style: solid;
+            border-color: white transparent;
+            display: block;
+            width: 0;
+            transform: translateX(-50%);
+        }
     </style>
 </head>
 <body>
@@ -44,6 +76,10 @@
         <p>Found: <span id="found">0</span>/5 | Time: <span id="timer">60</span>s</p>
     </div>
 
+    <div id="speech-bubble">
+        <span id="bubble-text"></span>
+    </div>
+
     <div class="container">
         <div class="image-box" onclick="checkClick(event)">
             <img id="img-left" src="">
@@ -53,22 +89,55 @@
         </div>
     </div>
 
-    <h2 id="msg" style="color: #FFD700;"></h2>
+    <h2 id="msg" style="color: #FFD700; margin-top: 20px;"></h2>
 
     <script>
         const levels = [
-            { title: "Underwater", img1: "spot-the-diff.png", img2: "spot-the-diff-2.png", diffs: [{x:88,y:64},{x:47,y:68},{x:36,y:72},{x:17,y:80},{x:95,y:60}] },
-            { title: "Playground", img1: "playgroundAA.png", img2: "playgroudB.png", diffs: [{x:31,y:32},{x:48,y:22},{x:69,y:16},{x:21,y:91},{x:74,y:84}] },
-            { title: "Bedroom", img1: "BedroomA.png", img2: "BedroomB.png", diffs: [{x:26,y:78},{x:48,y:77},{x:77,y:72},{x:91,y:86},{x:41,y:92}] }
+            { 
+                title: "Underwater", 
+                img1: "spot-the-diff.png", 
+                img2: "spot-the-diff-2.png", 
+                diffs: [{x:88,y:64},{x:47,y:68},{x:36,y:72},{x:17,y:80},{x:95,y:60}] 
+            },
+            { 
+                title: "Playground", 
+                img1: "playgroundAA.png", 
+                img2: "playgroudB.png", 
+                diffs: [{x:31,y:32},{x:48,y:22},{x:69,y:16},{x:21,y:91},{x:74,y:84}] 
+            },
+            { 
+                title: "Bedroom", 
+                img1: "BedroomA.png", 
+                img2: "BedroomB.png", 
+                diffs: [{x:26,y:78},{x:48,y:77},{x:77,y:72},{x:91,y:86},{x:41,y:92}],
+                // Snarky remarks mapped to coordinates
+                remarks: [
+                    "Aha! So you CAN see that wrapper... I thought it was an art piece titled 'Neglect'.",
+                    "Excellent spotting! Is that bathroom hook decorative, or does it actually work?",
+                    "You found it! Since you saw the sock, surely your feet can find the hamper.",
+                    "Incredible vision! Are you starting an ant colony, or waiting for it to walk itself to the trash?",
+                    "Busted! A shoe on a stool. I'm impressed by your dedication to finding the wrong home for everything."
+                ]
+            }
         ];
 
         let cur = 0; let found = 0; let time = 60; let active = false; let foundList = [];
+        let typingTimer;
 
         function startGame() {
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('bgMusic').play();
             loadLevel(0);
-            setInterval(() => { if(active && time > 0) { time--; document.getElementById('timer').innerText = time; if(time<=0) active=false; } }, 1000);
+            setInterval(() => { 
+                if(active && time > 0) { 
+                    time--; 
+                    document.getElementById('timer').innerText = time; 
+                    if(time <= 0) {
+                        active = false;
+                        document.getElementById('msg').innerText = "Time's Up! Try again?";
+                    }
+                } 
+            }, 1000);
         }
 
         function loadLevel(idx) {
@@ -77,6 +146,8 @@
             document.getElementById('img-left').src = levels[idx].img1;
             document.getElementById('img-right').src = levels[idx].img2;
             document.getElementById('found').innerText = "0";
+            document.getElementById('msg').innerText = "";
+            document.getElementById('speech-bubble').style.display = 'none';
             document.querySelectorAll('.marker').forEach(m => m.remove());
         }
 
@@ -87,27 +158,65 @@
             const y = ((e.clientY - rect.top) / rect.height) * 100;
 
             levels[cur].diffs.forEach((d, i) => {
-                if(!foundList[i] && Math.sqrt(Math.pow(x-d.x,2) + Math.pow(y-d.y,2)) < 8) {
+                if(!foundList[i] && Math.sqrt(Math.pow(x - d.x, 2) + Math.pow(y - d.y, 2)) < 8) {
                     foundList[i] = true; found++;
                     document.getElementById('found').innerText = found;
                     addCircle(d.x, d.y);
+                    
+                    // Trigger Snark and TTS on the final level
+                    if(cur === 2) {
+                        handleSnark(levels[cur].remarks[i]);
+                    }
+
                     if(found === 5) nextLevel();
                 }
             });
         }
 
+        function handleSnark(text) {
+            const bubble = document.getElementById('speech-bubble');
+            const txtSpan = document.getElementById('bubble-text');
+            
+            // 1. Text-to-Speech
+            window.speechSynthesis.cancel(); // Stop current speech
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.rate = 0.9; // Slightly slower for maximum snark effect
+            window.speechSynthesis.speak(speech);
+
+            // 2. Typewriter Effect
+            bubble.style.display = 'block';
+            txtSpan.innerHTML = "";
+            clearTimeout(typingTimer);
+            
+            let charIdx = 0;
+            function type() {
+                if (charIdx < text.length) {
+                    txtSpan.innerHTML += text.charAt(charIdx);
+                    charIdx++;
+                    typingTimer = setTimeout(type, 35); 
+                }
+            }
+            type();
+        }
+
         function addCircle(x, y) {
             document.querySelectorAll('.image-box').forEach(box => {
                 const c = document.createElement('div');
-                c.className = 'marker'; c.style.left = x+'%'; c.style.top = y+'%';
+                c.className = 'marker'; c.style.left = x + '%'; c.style.top = y + '%';
                 box.appendChild(c);
             });
         }
 
         function nextLevel() {
             active = false;
-            if(cur < 2) { setTimeout(() => loadLevel(cur+1), 1500); }
-            else { document.getElementById('msg').innerText = "You Win! Kiki, go clean your room!"; }
+            if(cur < 2) { 
+                setTimeout(() => loadLevel(cur + 1), 2500); 
+            }
+            else { 
+                document.getElementById('speech-bubble').style.display = 'none';
+                document.getElementById('msg').innerText = "You Win! Kiki, go clean your room!"; 
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance("You win. Now go clean your room."));
+            }
         }
     </script>
 </body>
