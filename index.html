@@ -66,6 +66,10 @@
     <audio id="bgMusic" loop>
         <source src="underwater-music.mp3" type="audio/mpeg">
     </audio>
+    
+    <audio id="victorySound">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3" type="audio/mpeg">
+    </audio>
 
     <div id="game-ui">
         <h2 id="level-title">Level 1</h2>
@@ -89,6 +93,8 @@
     </div>
 
     <h2 id="msg" style="color: #FFD700; margin-top: 20px;"></h2>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <script>
         console.log("Script Loaded Correctly");
@@ -133,19 +139,16 @@
             isMuted = !isMuted;
             document.getElementById('muteToggle').innerText = isMuted ? "🔇" : "🔊";
             document.getElementById('bgMusic').muted = isMuted;
+            document.getElementById('victorySound').muted = isMuted;
             if (isMuted) window.speechSynthesis.cancel();
         }
 
         function startGame() {
-            console.log("Starting Game...");
             document.getElementById('overlay').style.display = 'none';
-            
             const music = document.getElementById('bgMusic');
-            music.play().catch(err => console.log("Audio skipped until interaction"));
-            
+            music.play().catch(err => console.log("Audio waiting..."));
             loadLevel(0);
             
-            // Timer logic
             setInterval(() => { 
                 if(active && time > 0) { 
                     time--; 
@@ -171,14 +174,11 @@
             document.getElementById('found').innerText = "0";
             document.getElementById('msg').innerText = "";
             document.getElementById('speech-bubble').style.display = 'none';
-            
-            // Remove old markers
             document.querySelectorAll('.marker').forEach(m => m.remove());
         }
 
         function checkClick(e) {
             if(!active) return;
-            
             const rect = e.currentTarget.getBoundingClientRect();
             const x = ((e.clientX - rect.left) / rect.width) * 100;
             const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -239,13 +239,26 @@
 
         function nextLevel() {
             active = false;
+            let timeTaken = 60 - time;
+            
+            // Trigger Confetti & Sound
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            if (!isMuted) document.getElementById('victorySound').play();
+
             if(cur < levels.length - 1) { 
-                setTimeout(() => loadLevel(cur + 1), 2500); 
+                // Voice praise for early levels
+                if (!isMuted) {
+                    let praise = `What incredible vision Detective Mitsy! You solved that in ${timeTaken} seconds!`;
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(praise));
+                    document.getElementById('msg').innerText = praise;
+                }
+                setTimeout(() => loadLevel(cur + 1), 4000); 
             } else { 
+                // Final Level Conclusion
                 document.getElementById('speech-bubble').style.display = 'none';
                 document.getElementById('msg').innerText = "You Win! Kiki, go clean your room!"; 
                 if (!isMuted) {
-                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("You win. Now go clean your room."));
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("You win! Now go clean your room."));
                 }
             }
         }
