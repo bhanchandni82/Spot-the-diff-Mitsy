@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Underwater Spot the Difference</title>
+    <title>Kiki's Spot the Difference Challenge</title>
     <style>
         body {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
@@ -13,8 +13,10 @@
             margin: 0;
             padding: 10px;
             touch-action: manipulation;
+            overflow-x: hidden;
         }
 
+        /* Startup Overlay */
         #overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -26,9 +28,33 @@
             z-index: 2000;
         }
 
+        #cover-img {
+            max-width: 85%;
+            max-height: 65vh;
+            border-radius: 20px;
+            border: 5px solid #FFD700;
+            margin-bottom: 25px;
+            box-shadow: 0 0 35px rgba(255, 215, 0, 0.4);
+        }
+
+        /* 3-2-1 Countdown */
+        #countdown-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 160px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 30px black;
+            z-index: 2501;
+            display: none;
+            pointer-events: none;
+        }
+
         .start-btn {
-            padding: 25px 50px;
-            font-size: 32px;
+            padding: 20px 60px;
+            font-size: 30px;
             background: #FFD700;
             border: none;
             border-radius: 60px;
@@ -36,12 +62,12 @@
             color: #1e3c72;
             font-weight: bold;
             box-shadow: 0 0 30px #FFD700;
+            transition: transform 0.2s;
         }
 
-        /* AUTO-ADJUSTING LAYOUT */
         .container {
             display: flex;
-            flex-direction: column; /* Mobile first: Stacks images */
+            flex-direction: column;
             align-items: center;
             gap: 15px;
             width: 100%;
@@ -50,107 +76,174 @@
         }
 
         @media (min-width: 900px) {
-            .container {
-                flex-direction: row; /* Desktop: Side-by-side */
-                justify-content: center;
-            }
+            .container { flex-direction: row; justify-content: center; }
             .image-box { width: 48%; }
         }
 
         .image-box {
             position: relative;
-            width: 95%; /* Size on phone */
+            width: 95%;
             border: 4px solid white;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            background: #000;
         }
 
-        .image-box img {
-            width: 100%;
-            display: block;
-            pointer-events: none;
-        }
+        .image-box img { width: 100%; display: block; pointer-events: none; }
 
         .marker {
             position: absolute;
-            width: 45px;
-            height: 45px;
+            width: 50px;
+            height: 50px;
             border: 4px solid #00FF00;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
-            background: rgba(0, 255, 0, 0.2);
+            background: rgba(0, 255, 0, 0.3);
+            z-index: 10;
         }
 
-        #stats { font-size: 22px; margin: 15px 0; }
-        #message { font-size: 26px; color: #FFD700; min-height: 40px; margin-top: 15px; }
+        #stats { font-size: 24px; margin: 15px 0; font-weight: bold; }
+        
+        #message { 
+            font-size: 28px; 
+            color: #FFD700; 
+            min-height: 80px; 
+            margin-top: 15px; 
+            padding: 0 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .kiki-flash {
+            animation: blinker 0.6s linear infinite;
+            color: #ff3e3e;
+            font-weight: bold;
+            text-shadow: 0 0 15px white, 0 0 5px black;
+        }
+
+        @keyframes blinker { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1 style="font-size: 40px; margin-bottom: 30px;">🐠 Ready? 🐙</h1>
-        <button class="start-btn" onclick="startGame()">START GAME</button>
+        <img id="cover-img" src="coverpage Spot the diff.jpg" alt="Detective Mitsy">
+        <button class="start-btn" onclick="initiateCountdown()">START GAME</button>
     </div>
 
-    <audio id="bgMusic" loop crossorigin="anonymous">
-        <source src="underwater-music.mp3" type="audio/mpeg">
+    <div id="countdown-display"></div>
+
+    <audio id="bgMusic" loop>
+        <source src="Sergio's Magic Dustbin (1).mp3" type="audio/mpeg">
     </audio>
 
     <div class="game-header">
-        <h2 style="margin: 10px 0;">Underwater Treasure Hunt</h2>
+        <h2 id="level-title" style="margin: 10px 0;">Spot the Difference</h2>
         <div id="stats">
-            Time: <span id="timer">60</span>s | Found: <span id="found">0</span>/5
+            Level: <span id="current-level">1</span>/3 | Time: <span id="timer">60</span>s | Found: <span id="found">0</span>/<span id="total-needed">5</span>
         </div>
     </div>
 
     <div class="container">
         <div class="image-box" id="left-box" onclick="handleInput(event)">
-            <img src="./spot-the-diff.png" alt="Original">
+            <img id="img-left" src="" alt="Find the mess">
         </div>
         <div class="image-box" id="right-box" onclick="handleInput(event)">
-            <img src="./spot-the-diff-2.png" alt="Differences">
+            <img id="img-right" src="" alt="Find the mess">
         </div>
     </div>
 
     <div id="message"></div>
 
     <script>
-        // PRECISE COORDINATES FROM BLACK SQUARE MAP
-        const differences = [
-            {x: 88.2, y: 64.1, found: false}, // Starfish
-            {x: 47.5, y: 68.4, found: false}, // Chest Dot
-            {x: 36.6, y: 72.8, found: false}, // Fish Pattern
-            {x: 17.5, y: 80.2, found: false}, // Left Bubble
-            {x: 95.8, y: 60.5, found: false}  // Far Right Seahorse
+        const levels = [
+            {
+                title: "Level 1: Underwater Treasure Hunt",
+                img1: "spot-the-diff.png",
+                img2: "spot-the-diff-2.png",
+                time: 60,
+                diffs: [{x: 88.2, y: 64.1}, {x: 47.5, y: 68.4}, {x: 36.6, y: 72.8}, {x: 17.5, y: 80.2}, {x: 95.8, y: 60.5}]
+            },
+            {
+                title: "Level 2: Playground Playtime",
+                img1: "PlaygroundA.jpg",
+                img2: "playgroudB.jpg",
+                time: 60,
+                diffs: [{x: 31.5, y: 32.5}, {x: 48.8, y: 22.1}, {x: 69.2, y: 16.5}, {x: 21.0, y: 91.5}, {x: 74.5, y: 84.0}]
+            },
+            {
+                title: "Final Level: The Messy Room Challenge",
+                img1: "BedroomC.jpg",
+                img2: "BedroomB.jpg",
+                time: 60,
+                diffs: [
+                    {x: 26.5, y: 78.5}, // Candy wrapper
+                    {x: 48.0, y: 77.5}, // Towel
+                    {x: 77.5, y: 72.0}, // Juice
+                    {x: 91.0, y: 86.0}, // Shoe
+                    {x: 41.5, y: 92.5}  // Pizza/Sock
+                ]
+            }
         ];
 
+        let currentLevelIdx = 0;
         let foundCount = 0;
         let timeLeft = 60;
         let gameActive = false;
+        let timerInterval;
+        let foundList = [];
 
-        function startGame() {
+        function initiateCountdown() {
+            document.getElementById('overlay').style.display = 'none';
+            const countDisplay = document.getElementById('countdown-display');
             const music = document.getElementById('bgMusic');
             
-            // This is the strongest way to force audio to play on iPhones/Androids
-            music.load();
-            var playPromise = music.play();
+            music.play().catch(() => console.log("Music play blocked until interaction"));
+            
+            countDisplay.style.display = 'block';
+            let count = 3;
+            
+            const countInterval = setInterval(() => {
+                if (count > 0) {
+                    countDisplay.innerText = count;
+                } else if (count === 0) {
+                    countDisplay.innerText = "GO!";
+                } else {
+                    clearInterval(countInterval);
+                    countDisplay.style.display = 'none';
+                    loadLevel(0);
+                }
+                count--;
+            }, 1000);
+        }
 
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log("Auto-play was prevented. Using backup trigger.");
-                });
-            }
-
-            document.getElementById('overlay').style.display = 'none';
+        function loadLevel(idx) {
+            currentLevelIdx = idx;
+            const level = levels[idx];
+            document.getElementById('level-title').innerText = level.title;
+            document.getElementById('current-level').innerText = idx + 1;
+            document.getElementById('img-left').src = level.img1;
+            document.getElementById('img-right').src = level.img2;
+            document.getElementById('total-needed').innerText = level.diffs.length;
+            document.getElementById('found').innerText = "0";
+            document.getElementById('message').innerHTML = "";
+            
+            document.querySelectorAll('.marker').forEach(m => m.remove());
+            
+            foundCount = 0;
+            foundList = new Array(level.diffs.length).fill(false);
+            timeLeft = level.time;
+            document.getElementById('timer').innerText = timeLeft;
             gameActive = true;
+            
+            clearInterval(timerInterval);
             startCountdown();
         }
 
         function startCountdown() {
-            const timer = setInterval(() => {
-                if (!gameActive) return clearInterval(timer);
+            timerInterval = setInterval(() => {
+                if (!gameActive) return;
                 timeLeft--;
                 document.getElementById('timer').innerText = timeLeft;
                 if (timeLeft <= 0) endGame(false);
@@ -159,20 +252,19 @@
 
         function handleInput(e) {
             if (!gameActive) return;
-            
             const rect = e.currentTarget.getBoundingClientRect();
             const x = ((e.clientX - rect.left) / rect.width) * 100;
             const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-            differences.forEach(diff => {
-                if (!diff.found) {
+            levels[currentLevelIdx].diffs.forEach((diff, i) => {
+                if (!foundList[i]) {
                     const dist = Math.sqrt(Math.pow(x - diff.x, 2) + Math.pow(y - diff.y, 2));
-                    if (dist < 8) { // Tolerance set for easy phone tapping
-                        diff.found = true;
+                    if (dist < 10) { 
+                        foundList[i] = true;
                         foundCount++;
                         document.getElementById('found').innerText = foundCount;
                         draw(diff.x, diff.y);
-                        if (foundCount === 5) endGame(true);
+                        if (foundCount === levels[currentLevelIdx].diffs.length) checkWin();
                     }
                 }
             });
@@ -188,11 +280,27 @@
             });
         }
 
+        function checkWin() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            if (currentLevelIdx < levels.length - 1) {
+                document.getElementById('message').innerText = "Excellent Spotting! Loading next...";
+                setTimeout(() => { loadLevel(currentLevelIdx + 1); }, 2000);
+            } else {
+                endGame(true);
+            }
+        }
+
         function endGame(win) {
             gameActive = false;
+            clearInterval(timerInterval);
             const msg = document.getElementById('message');
-            msg.innerText = win ? "🎉 YOU WON!" : "⏰ TIME'S UP!";
-            if (!win) document.getElementById('bgMusic').pause();
+            if (win) {
+                msg.innerHTML = '<span class="kiki-flash">Ah Kiki so indeed you dont need glasses - if you can spot the mess then you have no excuse not to clean it!</span>';
+            } else {
+                msg.innerText = "⏰ TIME'S UP!";
+                document.getElementById('bgMusic').pause();
+            }
         }
     </script>
 </body>
