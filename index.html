@@ -105,6 +105,113 @@
                 img2: "playgroudB.png", 
                 diffs: [{x:31,y:32},{x:48,y:22},{x:69,y:16},{x:21,y:91},{x:74,y:84}] 
             },
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kiki's Spot the Difference</title>
+    <style>
+        body { background: #1e3c72; font-family: sans-serif; color: white; text-align: center; margin: 0; padding: 10px; }
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 2000;
+        }
+        #cover-img { 
+            max-width: 80%; max-height: 60vh; border: 5px solid #FFD700; 
+            border-radius: 15px; margin-bottom: 20px; 
+        }
+        .start-btn {
+            padding: 20px 50px; font-size: 24px; background: #FFD700;
+            border: none; border-radius: 50px; cursor: pointer; font-weight: bold;
+        }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+        .image-box { position: relative; width: 45%; min-width: 300px; border: 3px solid white; background: #000; }
+        .image-box img { width: 100%; display: block; }
+        .marker {
+            position: absolute; width: 40px; height: 40px; border: 3px solid #00FF00;
+            border-radius: 50%; transform: translate(-50%, -50%); background: rgba(0, 255, 0, 0.3);
+        }
+
+        /* Speech Bubble Styling */
+        #speech-bubble {
+            display: none;
+            background: white;
+            color: #333;
+            border-radius: 20px;
+            padding: 15px;
+            width: 85%;
+            max-width: 600px;
+            margin: 10px auto;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-weight: bold;
+            font-size: 1.1em;
+            border: 3px solid #FFD700;
+            min-height: 40px;
+            line-height: 1.4;
+            z-index: 100;
+        }
+        #speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            border-width: 15px 15px 0;
+            border-style: solid;
+            border-color: white transparent;
+            display: block;
+            width: 0;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <img id="cover-img" src="cover-page.png" alt="Detective Mitsy">
+        <button class="start-btn" onclick="startGame()">START GAME</button>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="underwater-music.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="game-ui">
+        <h2 id="level-title">Level 1</h2>
+        <p>Found: <span id="found">0</span>/5 | Time: <span id="timer">60</span>s</p>
+    </div>
+
+    <div id="speech-bubble">
+        <span id="bubble-text"></span>
+    </div>
+
+    <div class="container">
+        <div class="image-box" onclick="checkClick(event)">
+            <img id="img-left" src="">
+        </div>
+        <div class="image-box" onclick="checkClick(event)">
+            <img id="img-right" src="">
+        </div>
+    </div>
+
+    <h2 id="msg" style="color: #FFD700; margin-top: 20px;"></h2>
+
+    <script>
+        const levels = [
+            { 
+                title: "Underwater", 
+                img1: "spot-the-diff.png", 
+                img2: "spot-the-diff-2.png", 
+                diffs: [{x:88,y:64},{x:47,y:68},{x:36,y:72},{x:17,y:80},{x:95,y:60}] 
+            },
+            { 
+                title: "Playground", 
+                img1: "playgroundAA.png", 
+                img2: "playgroudB.png", 
+                diffs: [{x:31,y:32},{x:48,y:22},{x:69,y:16},{x:21,y:91},{x:74,y:84}] 
+            },
             { 
                 title: "Bedroom", 
                 img1: "BedroomA.png", 
@@ -119,6 +226,108 @@
                     "Busted! A shoe on a stool. I'm impressed by your dedication to finding the wrong home for everything."
                 ]
             }
+        ];
+
+        let cur = 0; let found = 0; let time = 60; let active = false; let foundList = [];
+        let typingTimer;
+
+        function startGame() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('bgMusic').play();
+            loadLevel(0);
+            setInterval(() => { 
+                if(active && time > 0) { 
+                    time--; 
+                    document.getElementById('timer').innerText = time; 
+                    if(time <= 0) {
+                        active = false;
+                        document.getElementById('msg').innerText = "Time's Up! Try again?";
+                    }
+                } 
+            }, 1000);
+        }
+
+        function loadLevel(idx) {
+            cur = idx; found = 0; time = 60; active = true; foundList = [];
+            document.getElementById('level-title').innerText = levels[idx].title;
+            document.getElementById('img-left').src = levels[idx].img1;
+            document.getElementById('img-right').src = levels[idx].img2;
+            document.getElementById('found').innerText = "0";
+            document.getElementById('msg').innerText = "";
+            document.getElementById('speech-bubble').style.display = 'none';
+            document.querySelectorAll('.marker').forEach(m => m.remove());
+        }
+
+        function checkClick(e) {
+            if(!active) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+            levels[cur].diffs.forEach((d, i) => {
+                if(!foundList[i] && Math.sqrt(Math.pow(x - d.x, 2) + Math.pow(y - d.y, 2)) < 8) {
+                    foundList[i] = true; found++;
+                    document.getElementById('found').innerText = found;
+                    addCircle(d.x, d.y);
+                    
+                    // Trigger Snark and TTS on the final level
+                    if(cur === 2) {
+                        handleSnark(levels[cur].remarks[i]);
+                    }
+
+                    if(found === 5) nextLevel();
+                }
+            });
+        }
+
+        function handleSnark(text) {
+            const bubble = document.getElementById('speech-bubble');
+            const txtSpan = document.getElementById('bubble-text');
+            
+            // 1. Text-to-Speech
+            window.speechSynthesis.cancel(); // Stop current speech
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.rate = 0.9; // Slightly slower for maximum snark effect
+            window.speechSynthesis.speak(speech);
+
+            // 2. Typewriter Effect
+            bubble.style.display = 'block';
+            txtSpan.innerHTML = "";
+            clearTimeout(typingTimer);
+            
+            let charIdx = 0;
+            function type() {
+                if (charIdx < text.length) {
+                    txtSpan.innerHTML += text.charAt(charIdx);
+                    charIdx++;
+                    typingTimer = setTimeout(type, 35); 
+                }
+            }
+            type();
+        }
+
+        function addCircle(x, y) {
+            document.querySelectorAll('.image-box').forEach(box => {
+                const c = document.createElement('div');
+                c.className = 'marker'; c.style.left = x + '%'; c.style.top = y + '%';
+                box.appendChild(c);
+            });
+        }
+
+        function nextLevel() {
+            active = false;
+            if(cur < 2) { 
+                setTimeout(() => loadLevel(cur + 1), 2500); 
+            }
+            else { 
+                document.getElementById('speech-bubble').style.display = 'none';
+                document.getElementById('msg').innerText = "You Win! Kiki, go clean your room!"; 
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance("You win. Now go clean your room."));
+            }
+        }
+    </script>
+</body>
+</html>
         ];
 
         let cur = 0; let found = 0; let time = 60; let active = false; let foundList = [];
