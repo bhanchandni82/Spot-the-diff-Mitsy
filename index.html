@@ -6,6 +6,8 @@
     <title>Kiki's Spot the Difference</title>
     <style>
         body { background: #1e3c72; font-family: sans-serif; color: white; text-align: center; margin: 0; padding: 10px; }
+        
+        /* Start Screen */
         #overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.9); display: flex; flex-direction: column;
@@ -18,49 +20,39 @@
         .start-btn {
             padding: 20px 50px; font-size: 24px; background: #FFD700;
             border: none; border-radius: 50px; cursor: pointer; font-weight: bold;
+            color: black;
         }
+
+        /* Layout */
         .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
-        .image-box { position: relative; width: 45%; min-width: 300px; border: 3px solid white; background: #000; }
+        .image-box { position: relative; width: 45%; min-width: 300px; border: 3px solid white; background: #000; cursor: crosshair; }
         .image-box img { width: 100%; display: block; }
+        
+        /* Markers */
         .marker {
             position: absolute; width: 40px; height: 40px; border: 3px solid #00FF00;
             border-radius: 50%; transform: translate(-50%, -50%); background: rgba(0, 255, 0, 0.3);
+            pointer-events: none;
         }
 
-        #game-ui { margin-bottom: 10px; }
+        /* UI elements */
         .mute-btn {
             background: #FFD700; border: none; border-radius: 5px; padding: 5px 15px;
-            cursor: pointer; font-weight: bold; margin-left: 10px; font-size: 18px;
+            cursor: pointer; font-weight: bold; margin-left: 10px; font-size: 18px; color: black;
         }
 
-        /* Speech Bubble Styling */
+        /* Speech Bubble */
         #speech-bubble {
-            display: none;
-            background: white;
-            color: #333;
-            border-radius: 20px;
-            padding: 15px;
-            width: 85%;
-            max-width: 600px;
-            margin: 10px auto;
-            position: relative;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            font-weight: bold;
-            font-size: 1.1em;
-            border: 3px solid #FFD700;
-            min-height: 40px;
-            line-height: 1.4;
-            z-index: 100;
+            display: none; background: white; color: #333; border-radius: 20px;
+            padding: 15px; width: 85%; max-width: 600px; margin: 10px auto;
+            position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-weight: bold; font-size: 1.1em; border: 3px solid #FFD700;
+            min-height: 40px; line-height: 1.4;
         }
         #speech-bubble::after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            border-width: 15px 15px 0;
-            border-style: solid;
-            border-color: white transparent;
-            display: block; width: 0; transform: translateX(-50%);
+            content: ''; position: absolute; bottom: -15px; left: 50%;
+            border-width: 15px 15px 0; border-style: solid;
+            border-color: white transparent; display: block; width: 0; transform: translateX(-50%);
         }
     </style>
 </head>
@@ -99,6 +91,8 @@
     <h2 id="msg" style="color: #FFD700; margin-top: 20px;"></h2>
 
     <script>
+        console.log("Script Loaded Correctly");
+
         const levels = [
             { 
                 title: "Underwater", 
@@ -127,23 +121,31 @@
             }    
         ];
 
-        let cur = 0; let found = 0; let time = 60; let active = false; let foundList = [];
+        let cur = 0; 
+        let found = 0; 
+        let time = 60; 
+        let active = false; 
+        let foundList = [];
         let typingTimer;
         let isMuted = false;
 
         function toggleMute() {
             isMuted = !isMuted;
             document.getElementById('muteToggle').innerText = isMuted ? "🔇" : "🔊";
-            const bgMusic = document.getElementById('bgMusic');
-            bgMusic.muted = isMuted;
+            document.getElementById('bgMusic').muted = isMuted;
             if (isMuted) window.speechSynthesis.cancel();
         }
 
         function startGame() {
+            console.log("Starting Game...");
             document.getElementById('overlay').style.display = 'none';
-            document.getElementById('bgMusic').play().catch(e => console.log("Audio waiting..."));
+            
+            const music = document.getElementById('bgMusic');
+            music.play().catch(err => console.log("Audio skipped until interaction"));
+            
             loadLevel(0);
             
+            // Timer logic
             setInterval(() => { 
                 if(active && time > 0) { 
                     time--; 
@@ -157,25 +159,34 @@
         }
 
         function loadLevel(idx) {
-            cur = idx; found = 0; time = 60; active = true; foundList = [];
+            cur = idx; 
+            found = 0; 
+            time = 60; 
+            active = true; 
+            foundList = new Array(levels[idx].diffs.length).fill(false);
+            
             document.getElementById('level-title').innerText = levels[idx].title;
             document.getElementById('img-left').src = levels[idx].img1;
             document.getElementById('img-right').src = levels[idx].img2;
             document.getElementById('found').innerText = "0";
             document.getElementById('msg').innerText = "";
             document.getElementById('speech-bubble').style.display = 'none';
+            
+            // Remove old markers
             document.querySelectorAll('.marker').forEach(m => m.remove());
         }
 
         function checkClick(e) {
             if(!active) return;
+            
             const rect = e.currentTarget.getBoundingClientRect();
             const x = ((e.clientX - rect.left) / rect.width) * 100;
             const y = ((e.clientY - rect.top) / rect.height) * 100;
 
             levels[cur].diffs.forEach((d, i) => {
                 if(!foundList[i] && Math.sqrt(Math.pow(x - d.x, 2) + Math.pow(y - d.y, 2)) < 8) {
-                    foundList[i] = true; found++;
+                    foundList[i] = true; 
+                    found++;
                     document.getElementById('found').innerText = found;
                     addCircle(d.x, d.y);
                     
@@ -183,7 +194,9 @@
                         handleSnark(levels[cur].remarks[i]);
                     }
 
-                    if(found === 5) nextLevel();
+                    if(found === levels[cur].diffs.length) {
+                        nextLevel();
+                    }
                 }
             });
         }
@@ -226,12 +239,14 @@
 
         function nextLevel() {
             active = false;
-            if(cur < 2) { 
+            if(cur < levels.length - 1) { 
                 setTimeout(() => loadLevel(cur + 1), 2500); 
             } else { 
                 document.getElementById('speech-bubble').style.display = 'none';
                 document.getElementById('msg').innerText = "You Win! Kiki, go clean your room!"; 
-                if (!isMuted) window.speechSynthesis.speak(new SpeechSynthesisUtterance("You win. Now go clean your room."));
+                if (!isMuted) {
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("You win. Now go clean your room."));
+                }
             }
         }
     </script>
